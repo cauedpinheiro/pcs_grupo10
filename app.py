@@ -196,7 +196,7 @@ with col_theme:
 # ── Carrega modelo TFLite ─────────────────────────────────────────────────────
 @st.cache_resource
 def load_model():
-    interpreter = Interpreter(model_path="model/model.tflite")
+    interpreter = Interpreter(model_path="model/model_unquant.tflite")
     interpreter.allocate_tensors()
     input_details  = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
