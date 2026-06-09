@@ -1,7 +1,15 @@
 import streamlit as st
 import numpy as np
 from PIL import Image
-import tensorflow as tf
+
+try:
+    from ai_edge_litert.interpreter import Interpreter
+except ImportError:
+    try:
+        import tflite_runtime.interpreter as tflite
+        Interpreter = tflite.Interpreter
+    except ImportError:
+        from tensorflow.lite.python.interpreter import Interpreter
 
 # ── Página ──────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -47,10 +55,7 @@ def inject_css(dark: bool):
     section[data-testid="stMain"] > div {{
         padding-top: 1.5rem;
     }}
-    /* oculta barra superior do Streamlit */
     #MainMenu, header, footer {{ visibility: hidden; }}
-
-    /* ── Topbar ── */
     .eco-topbar {{
         display: flex;
         align-items: center;
@@ -72,8 +77,6 @@ def inject_css(dark: bool):
     }}
     .eco-logo-name {{ font-size: 16px; font-weight: 600; color: {text}; }}
     .eco-logo-sub  {{ font-size: 11px; color: {muted}; }}
-
-    /* ── Cards ── */
     .eco-card {{
         background: {surface};
         border: 0.5px solid {border};
@@ -89,8 +92,6 @@ def inject_css(dark: bool):
         text-transform: uppercase;
         margin-bottom: 10px;
     }}
-
-    /* ── Resultado ── */
     .eco-result-recycle {{
         background: {green_lt};
         border: 0.5px solid {green_mid};
@@ -123,8 +124,6 @@ def inject_css(dark: bool):
         color: {brown};
     }}
     .eco-result-sub {{ font-size: 13px; color: {muted}; margin-top: 2px; }}
-
-    /* ── Dica ── */
     .eco-tip {{
         background: {green_lt};
         border: 0.5px solid {border};
@@ -135,8 +134,6 @@ def inject_css(dark: bool):
         line-height: 1.6;
         margin-top: 10px;
     }}
-
-    /* ── Botão principal ── */
     div[data-testid="stButton"] > button {{
         background: {green} !important;
         color: #fff !important;
@@ -146,49 +143,24 @@ def inject_css(dark: bool):
         padding: 10px 0 !important;
         width: 100%;
         font-size: 14px !important;
-        transition: opacity 0.15s;
     }}
-    div[data-testid="stButton"] > button:hover {{
-        opacity: 0.88 !important;
-    }}
-
-    /* ── File uploader ── */
+    div[data-testid="stButton"] > button:hover {{ opacity: 0.88 !important; }}
     [data-testid="stFileUploader"] {{
         background: {surface};
         border: 1.5px dashed {green_mid};
         border-radius: 14px;
         padding: 8px;
     }}
-
-    /* ── Barra de progresso ── */
     [data-testid="stProgress"] > div > div {{
         background-color: {green} !important;
     }}
-
-    /* ── Radio ── */
-    [data-testid="stRadio"] label {{
-        color: {text} !important;
-        font-size: 14px !important;
-    }}
-
-    /* ── Expander ── */
+    [data-testid="stRadio"] label {{ color: {text} !important; font-size: 14px !important; }}
     [data-testid="stExpander"] {{
         background: {surface};
         border: 0.5px solid {border} !important;
         border-radius: 12px !important;
     }}
-
-    /* ── Imagem enviada ── */
-    [data-testid="stImage"] img {{
-        border-radius: 12px;
-        border: 0.5px solid {border};
-    }}
-
-    /* ── Camera input ── */
-    [data-testid="stCameraInput"] {{
-        border-radius: 14px;
-        overflow: hidden;
-    }}
+    [data-testid="stImage"] img {{ border-radius: 12px; border: 0.5px solid {border}; }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -221,33 +193,40 @@ with col_theme:
         st.session_state.dark_mode = not st.session_state.dark_mode
         st.rerun()
 
-# ── Modelo ───────────────────────────────────────────────────────────────────
+# ── Carrega modelo TFLite ─────────────────────────────────────────────────────
 @st.cache_resource
 def load_model():
-    model = tf.keras.models.load_model("model/keras_model.h5", compile=False)
+    interpreter = Interpreter(model_path="model/model.tflite")
+    interpreter.allocate_tensors()
+    input_details  = interpreter.get_input_details()
+    output_details = interpreter.get_output_details()
     with open("model/labels.txt", "r", encoding="utf-8") as f:
         labels = [line.strip().split(" ", 1)[-1] for line in f.readlines()]
-    return model, labels
+    return interpreter, input_details, output_details, labels
 
 try:
-    model, labels = load_model()
+    interpreter, input_details, output_details, labels = load_model()
     model_ok = True
 except Exception as e:
     model_ok = False
-    st.error(f"Modelo não encontrado. Certifique-se de que `model/keras_model.h5` e `model/labels.txt` existem. ({e})")
+    st.error(f"Modelo não encontrado. Certifique-se que `model/model.tflite` e `model/labels.txt` existem. ({e})")
 
-# ── Predição ─────────────────────────────────────────────────────────────────
+# ── Predição ──────────────────────────────────────────────────────────────────
 def predict(image: Image.Image):
     img = image.convert("RGB").resize((224, 224))
     arr = np.array(img, dtype=np.float32)
     arr = (arr / 127.5) - 1.0
     arr = np.expand_dims(arr, axis=0)
-    preds = model.predict(arr, verbose=0)
-    idx = int(np.argmax(preds[0]))
-    conf = float(preds[0][idx]) * 100
-    return labels[idx], conf, preds[0]
 
-# ── Interface principal ───────────────────────────────────────────────────────
+    interpreter.set_tensor(input_details[0]["index"], arr)
+    interpreter.invoke()
+    preds = interpreter.get_tensor(output_details[0]["index"])[0]
+
+    idx  = int(np.argmax(preds))
+    conf = float(preds[idx]) * 100
+    return labels[idx], conf, preds
+
+# ── Interface ─────────────────────────────────────────────────────────────────
 st.markdown('<div class="eco-section-label">como deseja enviar a imagem?</div>', unsafe_allow_html=True)
 
 source = st.radio(
@@ -272,7 +251,7 @@ else:
     if captured:
         image = Image.open(captured)
 
-# ── Resultado ────────────────────────────────────────────────────────────────
+# ── Resultado ─────────────────────────────────────────────────────────────────
 if image and model_ok:
     col_img, col_res = st.columns([1, 1], gap="medium")
 
@@ -286,7 +265,7 @@ if image and model_ok:
         with st.spinner("Analisando..."):
             label, confidence, all_probs = predict(image)
 
-        is_recycle = any(w in label.upper() for w in ["RECICL", "SECO", "INORG"])
+        is_recycle = any(w in label.upper() for w in ["RECICL", "SECO", "INORG", "PLASTIC", "PAPEL", "VIDRO", "METAL"])
 
         if is_recycle:
             st.markdown(f"""
@@ -324,7 +303,6 @@ if image and model_ok:
         st.write("")
         st.metric("Confiança da análise", f"{confidence:.1f}%")
 
-    # Detalhes expandíveis
     with st.expander("Ver probabilidades detalhadas"):
         for lbl, prob in zip(labels, all_probs):
             st.write(f"**{lbl}**")
