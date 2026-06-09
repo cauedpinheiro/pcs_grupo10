@@ -179,7 +179,7 @@ with col_logo:
       <div class="eco-logo">
         <div class="eco-logo-icon">♻️</div>
         <div>
-          <div class="eco-logo-name">ResídUO</div>
+          <div class="eco-logo-name">Resíduo</div>
           <div class="eco-logo-sub">classificador inteligente de resíduos</div>
         </div>
       </div>
