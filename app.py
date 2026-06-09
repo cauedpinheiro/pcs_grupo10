@@ -13,7 +13,7 @@ except ImportError:
 
 # ── Página ──────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="ResídUO — Classificador de Resíduos",
+    page_title="Resíduo — Classificador de Resíduos",
     page_icon="♻️",
     layout="centered",
     initial_sidebar_state="collapsed"
