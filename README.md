@@ -92,7 +92,7 @@ O modelo de visão computacional foi criado no **Google Teachable Machine**:
 
 ## 👥 Equipe
 
-Desenvolvido pelo **Grupo 10**: Cauê Dias P R dos Santos (17883981); Luiz Guilherme de Faria Oliveira (17909126); Guylhermme Renzo S C da Silva (17863276); 
+Desenvolvido pelo **Grupo 10**: Cauê Dias P R dos Santos (17883981); Luiz Guilherme de F Oliveira (17909126); Guylhermme Renzo S C da Silva (17863276); Pedro Luca Z Sperandio (17919402); 
 
 
 Projeto Semestral da disciplina de PCS3100 (Introdução à Engenharia de Computação)
