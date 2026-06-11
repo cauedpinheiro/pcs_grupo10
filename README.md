@@ -92,8 +92,7 @@ O modelo de visão computacional foi criado no **Google Teachable Machine**:
 
 ## 👥 Equipe
 
-Desenvolvido pelo **Grupo 10** como projeto da disciplina de Programação Computacional Supervisionada.
-
+Desenvolvido pelo **Grupo 10** como projeto da disciplina de Introdução à Engenharia de Computação
 ---
 
 ## 📄 Licença
